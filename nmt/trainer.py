@@ -76,7 +76,7 @@ class Trainer:
         out = out.clone()
         out[~mask.bool()] = -1
         criterion = nn.CrossEntropyLoss(ignore_index=-1)
-        loss = criterion(logits[:-1].view(-1, logits.shape[-1]), out[1:].flatten())
+        loss = criterion(logits[:, :-1].reshape(-1, logits.shape[-1]), out[:, 1:].flatten())
         
         return loss
 
