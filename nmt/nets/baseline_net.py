@@ -71,7 +71,7 @@ class BasicNet(nn.Module):
             logits_sequence.append(logits)
         return torch.stack(logits_sequence, dim=1)
 
-    def decode_inference(self, initial_state, max_len=100, **flags):
+    def decode_inference(self, initial_state, **flags):
         """ Generate translations from model (greedy version) """
         batch_size, device = len(initial_state), initial_state.device
         state = initial_state
@@ -79,7 +79,7 @@ class BasicNet(nn.Module):
         outputs = [torch.full([batch_size], self.bos_idx, dtype=torch.int64, device=device)]
         # all_states = [initial_state]
 
-        for i in range(max_len):
+        for i in range(self.vocab.max_len):
             state, logits = self.decode_step(state, outputs[-1])
             outputs.append(logits.argmax(dim=-1))
             # all_states.append(state)
