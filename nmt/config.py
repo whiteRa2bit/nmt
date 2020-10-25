@@ -21,9 +21,9 @@ TRAIN_SIZE = 0.95
 CONFIG = {
     "data": {
         "src_vocab_size": 5000,
-        "src_max_len": 5,
+        "src_max_len": 45,
         "trg_vocab_size": 5000,
-        "trg_max_len": 5
+        "trg_max_len": 42
     },
     "train": {
         "lr": 1e-3,
