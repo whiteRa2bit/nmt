@@ -43,13 +43,13 @@ class Trainer:
                 inp, out = item
                 inp = inp.to(self.config["device"])
                 out = out.to(self.config["device"])
-                
+
                 self.optimizer.zero_grad()
 
                 enc_out = self.encoder(inp)
                 logits = self.decoder(out, enc_out)
                 loss = self._compute_loss(logits, inp, out)
-                
+
                 loss.backward()
                 self.optimizer.step()
 
@@ -80,13 +80,13 @@ class Trainer:
         out[~mask.bool()] = -1
         criterion = nn.CrossEntropyLoss(ignore_index=-1)
         loss = criterion(logits[:, :-1].reshape(-1, logits.shape[-1]), out[:, 1:].flatten())
-        
+
         return loss
 
     def _compute_metrics(self, dataloader, samples_num=SAMPLES_NUM):
         self.encoder.eval()
         self.decoder.eval()
-        
+
         inp = []
         out = []
         logits = []
@@ -98,7 +98,7 @@ class Trainer:
             with torch.no_grad():
                 batch_enc_out = self.encoder(batch_inp)
                 batch_logits = self.decoder(batch_out, batch_enc_out)
-            
+
             inp.append(batch_inp)
             out.append(batch_out)
             logits.append(batch_logits)
@@ -134,11 +134,10 @@ class Trainer:
         pred_idxs = torch.argmax(logits, dim=2)
         pred_idxs = pred_idxs.detach().cpu().numpy()
         texts = self.trg_vocab.decode_idxs(pred_idxs)
-        
+
         return texts
 
     @staticmethod
     def _compute_mask(input_ix, eos_ix):
         return F.pad(torch.cumsum(input_ix == eos_ix, dim=-1)[..., :-1] < 1, \
                     pad=(1, 0, 0, 0), value=True)
-

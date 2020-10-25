@@ -3,8 +3,11 @@ from torch.utils.data import Dataset, DataLoader
 
 
 def get_texts(path):
-    with open(path) as file:
-        return list(map(str.strip, file.readlines()))
+    try:
+        with open(path) as file:
+            return list(map(str.strip, file.readlines()))
+    except FileNotFoundError:
+        return []
 
 
 # TODO: (@whiteRa2bit, 2020-08-30) Fix for only src_data
@@ -13,12 +16,12 @@ class TextDataset(Dataset):
         self.src_vocab = src_vocab
         self.trg_vocab = trg_vocab
 
-        src_texts = get_texts(src_data_path)
-        trg_texts = get_texts(trg_data_path)
-        assert (len(src_texts) == len(trg_texts))
+        self.src_texts = get_texts(src_data_path)
+        self.trg_texts = get_texts(trg_data_path)
+        assert ((not self.trg_texts) or (len(self.src_texts) == len(self.trg_texts)))
 
-        self.src_idxs = self.src_vocab.vectorize_texts(src_texts)
-        self.trg_idxs = self.trg_vocab.vectorize_texts(trg_texts)
+        self.src_idxs = self.src_vocab.vectorize_texts(self.src_texts)
+        self.trg_idxs = self.trg_vocab.vectorize_texts(self.trg_texts)
 
     def __len__(self):
         return len(self.src_idxs)
