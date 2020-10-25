@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +11,7 @@ from loguru import logger
 
 from nmt.utils import get_checkpoint_path
 from nmt.metrics import compute_bleu
-from nmt.config import CONFIG, WANDB_PROJECT, SAMPLES_NUM
+from nmt.config import CONFIG, WANDB_PROJECT, SAMPLES_NUM, CHECKPOINT_DIR
 
 
 class Trainer:
@@ -27,6 +29,7 @@ class Trainer:
     def _initialize_wandb(self, project_name=WANDB_PROJECT):
         wandb.init(config=self.config, project=project_name)
         wandb.watch(self.encoder)
+        wandb.watch(self.decoder)
 
     def train(self):
         self.encoder.train()
@@ -121,7 +124,10 @@ class Trainer:
         return {"loss": loss, "bleu": bleu, "samples": samples}
 
     def _save_checkpoint(self, model):
-        checkpoint_path = get_checkpoint_path(model, self.config)
+        checkpoint_dir = os.path.join(CHECKPOINT_DIR, wandb.run.id)
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        checkpoint_path = os.path.join(checkpoint_dir, f"{model.name}.pt")
         torch.save(model.state_dict(), checkpoint_path)
 
     def _translate(self, logits):  # TODO: (@whiteRa2bit, 2020-10-24) Move to another module
@@ -135,3 +141,4 @@ class Trainer:
     def _compute_mask(input_ix, eos_ix):
         return F.pad(torch.cumsum(input_ix == eos_ix, dim=-1)[..., :-1] < 1, \
                     pad=(1, 0, 0, 0), value=True)
+
