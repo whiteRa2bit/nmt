@@ -15,9 +15,8 @@ from nmt.config import CONFIG, WANDB_PROJECT, SAMPLES_NUM, CHECKPOINT_DIR
 
 
 class Trainer:
-    def __init__(self, encoder, decoder, optimizer, train_dataset, val_dataset, config=CONFIG["train"]):
-        self.encoder = encoder.to(config['device'])
-        self.decoder = decoder.to(config['device'])
+    def __init__(self, model, optimizer, train_dataset, val_dataset, config=CONFIG["train"]):
+        self.model = model.to(config['device'])
         self.optimizer = optimizer
         self.config = config
         self.criterion = nn.CrossEntropyLoss()
@@ -28,12 +27,10 @@ class Trainer:
 
     def _initialize_wandb(self, project_name=WANDB_PROJECT):
         wandb.init(config=self.config, project=project_name)
-        wandb.watch(self.encoder)
-        wandb.watch(self.decoder)
+        wandb.watch(self.model)
 
     def train(self):
-        self.encoder.train()
-        self.decoder.train()
+        self.model.train()
         self._initialize_wandb()
 
         best_val_bleu = 0
@@ -46,8 +43,8 @@ class Trainer:
 
                 self.optimizer.zero_grad()
 
-                enc_out = self.encoder(inp)
-                logits = self.decoder(out, enc_out)
+                enc_last_state = self.model.encode(inp)
+                logits = self.model.decode(out, enc_last_state)
                 loss = self._compute_loss(logits, inp, out)
 
                 loss.backward()
@@ -55,20 +52,17 @@ class Trainer:
 
                 if idx % self.config['log_each'] == 0:
                     val_metrics = self._compute_metrics(self.val_dataloader)
-                    val_loss = val_metrics['loss']
                     val_samples = val_metrics['samples']
                     val_bleu = val_metrics['bleu']
 
                     wandb.log({
                         "Train Loss": loss.item(), \
-                        "Val Loss": val_loss.item(), \
                         "Val Bleu": val_bleu, \
                         "Translations": wandb.Table(data=val_samples, columns=["Real", "Translation"])
                     })
 
                     if val_bleu > best_val_bleu:
-                        self._save_checkpoint(self.encoder)
-                        self._save_checkpoint(self.decoder)
+                        self._save_checkpoint(self.model)
                         best_val_bleu = val_bleu
 
         logger.info(f"Training finished. Best validation bleu: {best_val_bleu}")
@@ -84,33 +78,24 @@ class Trainer:
         return loss
 
     def _compute_metrics(self, dataloader, samples_num=SAMPLES_NUM):
-        self.encoder.eval()
-        self.decoder.eval()
+        self.model.eval()
 
-        inp = []
         out = []
-        logits = []
+        preds = []
         for batch_item in dataloader:
             batch_inp, batch_out = batch_item
             batch_inp = batch_inp.to(self.config["device"])
             batch_out = batch_out.to(self.config["device"])
 
             with torch.no_grad():
-                batch_enc_out = self.encoder(batch_inp)
-                batch_logits = self.decoder(batch_out, batch_enc_out)
+                batch_enc_last_state = self.model.encode(batch_inp)
+                batch_preds = self.model.decode_inference(batch_enc_last_state)
 
-            inp.append(batch_inp)
             out.append(batch_out)
-            logits.append(batch_logits)
+            preds.append(batch_preds)
 
-        out = torch.cat(out)
-        inp = torch.cat(inp)
-        logits = torch.cat(logits)
-        translations = self._translate(logits)
-
-        loss = self._compute_loss(logits, inp, out)
-        out = out.detach().cpu().numpy()
-        real = self.trg_vocab.decode_idxs(out)
+        real = self._to_texts(out)
+        translations = self._to_texts(preds)
         bleu = compute_bleu(translations, real)
 
         sample_idxs = np.random.choice(range(len(dataloader.dataset)), samples_num)
@@ -118,10 +103,9 @@ class Trainer:
         samples_pred = np.array(translations)[sample_idxs]
         samples = list(zip(samples_real, samples_pred))
 
-        self.encoder.train()
-        self.decoder.train()
+        self.model.train()
 
-        return {"loss": loss, "bleu": bleu, "samples": samples}
+        return {"bleu": bleu, "samples": samples}
 
     def _save_checkpoint(self, model):
         checkpoint_dir = os.path.join(CHECKPOINT_DIR, wandb.run.id)
@@ -130,10 +114,10 @@ class Trainer:
         checkpoint_path = os.path.join(checkpoint_dir, f"{model.name}.pt")
         torch.save(model.state_dict(), checkpoint_path)
 
-    def _translate(self, logits):  # TODO: (@whiteRa2bit, 2020-10-24) Move to another module
-        pred_idxs = torch.argmax(logits, dim=2)
-        pred_idxs = pred_idxs.detach().cpu().numpy()
-        texts = self.trg_vocab.decode_idxs(pred_idxs)
+    def _to_texts(self, out_idxs):  # TODO: (@whiteRa2bit, 2020-10-24) Move to another module
+        out_idxs = torch.cat(out_idxs)
+        out_idxs = out_idxs.detach().cpu().numpy()
+        texts = self.trg_vocab.decode_idxs(out_idxs)
 
         return texts
 
