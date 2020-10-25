@@ -10,7 +10,9 @@ requirements = [
     # "torchvision=0.7.0",
     "tqdm==4.48.2",
     "pandas==1.1.0",
-    "wandb==0.10.5"
+    "wandb==0.10.5",
+    "numpy==1.18.1"
+    "loguru==0.5.3"
 ]
 
 setup(
