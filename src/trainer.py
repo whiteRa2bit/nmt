@@ -4,13 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-import numpy as np
-import tqdm
-import wandb
-from loguru import logger
 
-from nmt.metrics import compute_bleu
-from nmt.config import CONFIG, WANDB_PROJECT, SAMPLES_NUM, CHECKPOINT_DIR
+from metrics import compute_bleu
+from config import CONFIG, CHECKPOINT_DIR
 
 
 class Trainer:
@@ -24,17 +20,12 @@ class Trainer:
         self.train_dataloader = DataLoader(train_dataset, self.config["train_batch_size"], True)
         self.val_dataloader = DataLoader(val_dataset, self.config["val_batch_size"])
 
-    def _initialize_wandb(self, project_name=WANDB_PROJECT):
-        wandb.init(config=self.config, project=project_name)
-        wandb.watch(self.model)
-
     def train(self):
         self.model.train()
-        self._initialize_wandb()
 
         best_val_bleu = 0
         for epoch in range(self.config['epochs_num']):
-            logger.info(f"Epoch {epoch} started...")
+            print(f"Epoch {epoch} started...")
             for idx, item in tqdm.tqdm(enumerate(self.train_dataloader)):
                 inp, out = item
                 inp = inp.to(self.config["device"])
@@ -50,15 +41,10 @@ class Trainer:
                 self.optimizer.step()
 
                 if idx % self.config['log_each'] == 0:
-                    val_metrics = self._compute_metrics(self.val_dataloader)
-                    val_samples = val_metrics['samples']
-                    val_bleu = val_metrics['bleu']
+                    val_bleu = self._compute_bleu(self.val_dataloader)
 
-                    wandb.log({
-                        "Train Loss": loss.item(), \
-                        "Val Bleu": val_bleu, \
-                        "Translations": wandb.Table(data=val_samples, columns=["Real", "Translation"])
-                    })
+                    print("Train Loss:", loss.item())
+                    print("Val Bleu:", val_bleu)
 
                     if val_bleu > best_val_bleu:
                         self._save_checkpoint(self.model)
@@ -76,7 +62,7 @@ class Trainer:
 
         return loss
 
-    def _compute_metrics(self, dataloader, samples_num=SAMPLES_NUM):
+    def _compute_bleu(self, dataloader, samples_num=SAMPLES_NUM):
         self.model.eval()
 
         out = []
@@ -97,17 +83,12 @@ class Trainer:
         translations = self._to_texts(preds)
         bleu = compute_bleu(translations, real)
 
-        sample_idxs = np.random.choice(range(len(dataloader.dataset)), samples_num)
-        samples_real = np.array(real)[sample_idxs]
-        samples_pred = np.array(translations)[sample_idxs]
-        samples = list(zip(samples_real, samples_pred))
-
         self.model.train()
 
         return {"bleu": bleu, "samples": samples}
 
     def _save_checkpoint(self, model):
-        checkpoint_dir = os.path.join(CHECKPOINT_DIR, wandb.run.id)
+        checkpoint_dir = CHECKPOINT_DIR
         if not os.path.exists(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         checkpoint_path = os.path.join(checkpoint_dir, f"{model.name}.pt")

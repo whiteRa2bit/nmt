@@ -12,10 +12,6 @@ TEST_SRC_PATH = os.path.join(RAW_DATA_DIR, "test1.de-en.en")
 
 CHECKPOINT_DIR = os.path.join(DATA_DIR, "checkpoints")
 
-# WANDB params
-WANDB_PROJECT = "dl_hse_nmt"
-SAMPLES_NUM = 10
-
 # Training params
 TRAIN_SIZE = 0.95
 CONFIG = {
