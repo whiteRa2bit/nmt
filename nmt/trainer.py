@@ -9,7 +9,6 @@ import tqdm
 import wandb
 from loguru import logger
 
-from nmt.utils import get_checkpoint_path
 from nmt.metrics import compute_bleu
 from nmt.config import CONFIG, WANDB_PROJECT, SAMPLES_NUM, CHECKPOINT_DIR
 
@@ -44,7 +43,7 @@ class Trainer:
                 self.optimizer.zero_grad()
 
                 enc_last_state = self.model.encode(inp)
-                logits = self.model.decode(out, enc_last_state)
+                logits = self.model.decode(enc_last_state, out)
                 loss = self._compute_loss(logits, inp, out)
 
                 loss.backward()
