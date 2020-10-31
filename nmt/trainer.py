@@ -14,10 +14,11 @@ from nmt.config import CONFIG, WANDB_PROJECT, SAMPLES_NUM, CHECKPOINT_DIR
 
 
 class Trainer:
-    def __init__(self, model, optimizer, train_dataset, val_dataset, config=CONFIG["train"]):
-        self.model = model.to(config['device'])
+    def __init__(self, model, optimizer, train_dataset, val_dataset, config=CONFIG):
+        self.full_config = config
+        self.config = config["train"]
+        self.model = model.to(self.config['device'])
         self.optimizer = optimizer
-        self.config = config
         self.criterion = nn.CrossEntropyLoss()
         self.src_vocab = train_dataset.src_vocab
         self.trg_vocab = train_dataset.trg_vocab
@@ -25,7 +26,7 @@ class Trainer:
         self.val_dataloader = DataLoader(val_dataset, self.config["val_batch_size"])
 
     def _initialize_wandb(self, project_name=WANDB_PROJECT):
-        wandb.init(config=self.config, project=project_name)
+        wandb.init(config=self.full_config, project=project_name)
         wandb.watch(self.model)
 
     def train(self):
