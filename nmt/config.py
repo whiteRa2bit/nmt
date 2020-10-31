@@ -27,13 +27,13 @@ CONFIG = {
     },
     "train": {
         "lr": 1e-3,
-        "epochs_num": 100,
+        "epochs_num": 25,
         "enc_emb_size": 16,
         "enc_hid_size": 256,
         "dec_emb_size": 15,
         "dec_hid_size": 256,
         "log_each": 100,
-        "device": "cuda:3",
+        "device": "cuda:0",
         "train_batch_size": 64,
         "val_batch_size": 128,
     }
