@@ -20,9 +20,9 @@ SAMPLES_NUM = 10
 TRAIN_SIZE = 0.95
 CONFIG = {
     "data": {
-        "src_vocab_size": 5000,
+        "src_vocab_size": 20000,
         "src_max_len": 45,
-        "trg_vocab_size": 5000,
+        "trg_vocab_size": 20000,
         "trg_max_len": 42
     },
     "train": {
@@ -33,7 +33,7 @@ CONFIG = {
         "dec_emb_size": 15,
         "dec_hid_size": 256,
         "log_each": 100,
-        "device": "cuda:0",
+        "device": "cuda:3",
         "train_batch_size": 64,
         "val_batch_size": 128,
     }
