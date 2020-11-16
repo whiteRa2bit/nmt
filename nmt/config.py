@@ -20,14 +20,14 @@ SAMPLES_NUM = 10
 TRAIN_SIZE = 0.95
 CONFIG = {
     "data": {
-        "src_vocab_size": 5000,
+        "src_vocab_size": 20000,
         "src_max_len": 45,
-        "trg_vocab_size": 5000,
+        "trg_vocab_size": 20000,
         "trg_max_len": 42
     },
     "train": {
         "lr": 1e-3,
-        "epochs_num": 100,
+        "epochs_num": 25,
         "enc_emb_size": 16,
         "enc_hid_size": 256,
         "dec_emb_size": 15,
